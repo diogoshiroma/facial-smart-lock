@@ -35,6 +35,8 @@ time.sleep(2.0)
 # start the FPS counter
 fps = FPS().start()
 
+aws_flag = False
+
 # loop over frames from the video file stream
 while True:
 	# grab the frame from the threaded video stream and resize it
@@ -62,47 +64,47 @@ while True:
 	names = []
 
 	# loop over the facial embeddings
-	for encoding in encodings:
-		# attempt to match each face in the input image to our known
-		# encodings
-		matches = face_recognition.compare_faces(data["encodings"],
-			encoding)
-		name = "Unknown"
+	# for encoding in encodings:
+	# 	# attempt to match each face in the input image to our known
+	# 	# encodings
+	# 	matches = face_recognition.compare_faces(data["encodings"],
+	# 		encoding)
+	# 	name = "Unknown"
 
-		# check to see if we have found a match
-		if True in matches:
-			# find the indexes of all matched faces then initialize a
-			# dictionary to count the total number of times each face
-			# was matched
-			matchedIdxs = [i for (i, b) in enumerate(matches) if b]
-			counts = {}
+	# 	# check to see if we have found a match
+	# 	if True in matches:
+	# 		# find the indexes of all matched faces then initialize a
+	# 		# dictionary to count the total number of times each face
+	# 		# was matched
+	# 		matchedIdxs = [i for (i, b) in enumerate(matches) if b]
+	# 		counts = {}
 
-			# loop over the matched indexes and maintain a count for
-			# each recognized face face
-			for i in matchedIdxs:
-				name = data["names"][i]
-				counts[name] = counts.get(name, 0) + 1
+	# 		# loop over the matched indexes and maintain a count for
+	# 		# each recognized face face
+	# 		for i in matchedIdxs:
+	# 			name = data["names"][i]
+	# 			counts[name] = counts.get(name, 0) + 1
 
-			# determine the recognized face with the largest number
-			# of votes (note: in the event of an unlikely tie Python
-			# will select first entry in the dictionary)
-			name = max(counts, key=counts.get)
+	# 		# determine the recognized face with the largest number
+	# 		# of votes (note: in the event of an unlikely tie Python
+	# 		# will select first entry in the dictionary)
+	# 		name = max(counts, key=counts.get)
 		
-		# update the list of names
-		names.append(name)
+	# 	# update the list of names
+	# 	names.append(name)
 
 	# loop over the recognized faces
-	for ((top, right, bottom, left), name) in zip(boxes, names):
-		# draw the predicted face name on the image
-		cv2.rectangle(frame, (left, top), (right, bottom),
-			(0, 255, 0), 2)
-		y = top - 15 if top - 15 > 15 else top + 15
-		cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
-			0.75, (0, 255, 0), 2)
+	# for ((top, right, bottom, left), name) in zip(boxes, names):
+	# 	# draw the predicted face name on the image
+	# 	cv2.rectangle(frame, (left, top), (right, bottom),
+	# 		(0, 255, 0), 2)
+	# 	y = top - 15 if top - 15 > 15 else top + 15
+	# 	cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
+	# 		0.75, (0, 255, 0), 2)
 
 	# display the image to our screen
 	cv2.imshow("Frame", frame)
-	# cv2.imwrite('potato.jpg', frame)
+	cv2.imwrite('frame.jpg', frame)
 	key = cv2.waitKey(1) & 0xFF
 
 	# if the `q` key was pressed, break from the loop
@@ -112,14 +114,20 @@ while True:
 	# update the FPS counter
 	fps.update()
 
-	if len(rects):
-		print('rostoo')
-		aws_rekognition()
-		break
-	else: 
-		print('nao rosto')
+	if len(rects) and not aws_flag:
+		print('Analisando face...')
+		faceMatches = aws_rekognition()
+		print ('Matching faces')
+		if faceMatches:
+			for match in faceMatches:
+					# print ('FaceId:' + match['Face']['FaceId'])
+					print ('FaceId:' + match['Face']['ExternalImageId'])
+					print ('Similarity: ' + "{:.2f}".format(match['Similarity']) + "%")
+					aws_flag = True
+		else:
+			print('No match!')
 
-	time.sleep(1)
+	# time.sleep(1)
 
 # stop the timer and display FPS information
 fps.stop()
@@ -127,5 +135,6 @@ print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
 print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
 # do a bit of cleanup
-vs.release()
+vs.stop()
+time.sleep(1)
 cv2.destroyAllWindows()
