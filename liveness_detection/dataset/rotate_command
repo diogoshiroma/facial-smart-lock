@@ -1,0 +1,1 @@
+for file in *.png; do convert $file -rotate 90 $file; done
